@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dogenals.com/spec/protocols/dns/schemas/register.schema.json",
+  "title": "DNS register inscription body",
+  "description": "JSON inscription body only. This object is valid solely as the content of an ord envelope (text/plain names need no JSON). The same bytes in an OP_RETURN, including any DNS1|reg|… pipe string, are not a registration.",
+  "type": "object",
+  "required": ["p", "op", "name"],
+  "properties": {
+    "p": { "const": "dns" },
+    "op": {
+      "enum": ["register", "reg"],
+      "description": "reg is an alias of register. config/update/upd are a different inscription and are not this schema."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 127,
+      "description": "label.namespace — SNS UTF-8 charset (emoji ok); one dot; no spaces"
+    },
+    "address": { "type": "string" },
+    "url": { "type": "string" },
+    "website": { "type": "string" },
+    "site": { "type": "string" },
+    "insc": { "type": "string" },
+    "html": { "type": "string" },
+    "avatar": { "type": "string" },
+    "content": { "type": "string", "maxLength": 280 },
+    "cname": { "type": "string" }
+  },
+  "additionalProperties": true
+}

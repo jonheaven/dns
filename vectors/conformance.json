@@ -1,0 +1,139 @@
+{
+  "protocol": "dns",
+  "version": "1.0",
+  "vectors": [
+    {
+      "id": "plain-jon",
+      "ok": true,
+      "op": "register",
+      "body": "jon.doge",
+      "name": "jon.doge",
+      "namespace": "doge"
+    },
+    {
+      "id": "json-register",
+      "ok": true,
+      "op": "register",
+      "body": "{\"p\":\"dns\",\"op\":\"register\",\"name\":\"jon.doge\",\"url\":\"https://dogecoin.dog\"}",
+      "name": "jon.doge",
+      "url": "https://dogecoin.dog"
+    },
+    {
+      "id": "uppercase-normalized",
+      "ok": true,
+      "op": "register",
+      "body": "Jon.Doge",
+      "name": "jon.doge"
+    },
+    {
+      "id": "open-namespace-eth",
+      "ok": true,
+      "op": "register",
+      "body": "jon.eth",
+      "name": "jon.eth",
+      "namespace": "eth"
+    },
+    {
+      "id": "www-allowed",
+      "ok": true,
+      "op": "register",
+      "body": "{\"p\":\"dns\",\"op\":\"register\",\"name\":\"www.doge\"}",
+      "name": "www.doge"
+    },
+    {
+      "id": "api-allowed",
+      "ok": true,
+      "op": "register",
+      "body": "api.doge",
+      "name": "api.doge"
+    },
+    {
+      "id": "emoji-label",
+      "ok": true,
+      "op": "register",
+      "body": "🐕.doge",
+      "name": "🐕.doge"
+    },
+    {
+      "id": "space-rejected",
+      "ok": false,
+      "body": "has space.doge"
+    },
+    {
+      "id": "slash-path-rejected",
+      "ok": false,
+      "body": "d.gg/rjg9wk3uu3"
+    },
+    {
+      "id": "leading-hyphen-rejected",
+      "ok": false,
+      "body": "-jon.doge"
+    },
+    {
+      "id": "fullwidth-letters-fold",
+      "ok": true,
+      "op": "register",
+      "body": "Ｊｏｎ.doge",
+      "name": "jon.doge"
+    },
+    {
+      "id": "dogemap-carveout",
+      "ok": false,
+      "body": "6412814.dogemap"
+    },
+    {
+      "id": "dogimap-open",
+      "ok": true,
+      "op": "register",
+      "body": "1.dogimap",
+      "name": "1.dogimap"
+    },
+    {
+      "id": "speak-digit-ns",
+      "ok": true,
+      "op": "register",
+      "body": "such.123",
+      "name": "such.123"
+    },
+    {
+      "id": "underscore-rejected",
+      "ok": false,
+      "body": "self.total_supply"
+    },
+    {
+      "id": "hyphen-ok",
+      "ok": true,
+      "op": "register",
+      "body": "doge-labs.doge",
+      "name": "doge-labs.doge"
+    },
+    {
+      "id": "config",
+      "ok": true,
+      "op": "config",
+      "body": "{\"p\":\"dns\",\"op\":\"config\",\"name\":\"jon.doge\",\"url\":\"https://dogex.dog\"}",
+      "name": "jon.doge"
+    },
+    {
+      "id": "dns1-pipe-body-rejected",
+      "ok": false,
+      "carrier": "inscription-body",
+      "body": "DNS1|reg|example.doge|D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA",
+      "reason": "Pipe codec is not label.namespace and not p:dns JSON."
+    },
+    {
+      "id": "dns1-pipe-opreturn-rejected",
+      "ok": false,
+      "carrier": "op_return",
+      "body": "DNS1|reg|example.doge|D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA",
+      "reason": "Nulldata is not an ord inscription. Explorers call this unknown embedded data."
+    },
+    {
+      "id": "json-in-opreturn-rejected",
+      "ok": false,
+      "carrier": "op_return",
+      "body": "{\"p\":\"dns\",\"op\":\"register\",\"name\":\"jon.doge\"}",
+      "reason": "JSON registers only as inscription content."
+    }
+  ]
+}
