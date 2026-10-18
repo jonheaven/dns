@@ -6,7 +6,7 @@ A `.doge` name is a Doginals inscription. The first valid inscription wins, and 
 
 | | |
 | ---: | --- |
-| **Version** | v1.1 carrier lock |
+| **Version** | v1.2 records + ordering |
 | **Class** | Transferable name object + site records |
 | **Payload** | Doginals inscription: plain `label.namespace` or JSON `"p": "dns"` |
 | **User-facing name** | ÐNS · Dogecoin Names System · `.doge` names |

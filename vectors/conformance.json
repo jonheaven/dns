@@ -1,6 +1,6 @@
 {
   "protocol": "dns",
-  "version": "1.0",
+  "version": "1.2",
   "vectors": [
     {
       "id": "plain-jon",
@@ -127,6 +127,27 @@
       "carrier": "op_return",
       "body": "DNS1|reg|example.doge|D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA",
       "reason": "Nulldata is not an ord inscription. Explorers call this unknown embedded data."
+    },
+    {
+      "id": "mixed-script-rejected",
+      "ok": false,
+      "body": "j\u043en.doge",
+      "reason": "Latin plus Cyrillic in one label is a homoglyph. Reject. Do not fold onto ASCII."
+    },
+    {
+      "id": "cyrillic-lookalike-distinct",
+      "ok": true,
+      "op": "register",
+      "body": "\u0441\u043e\u0440\u0435\u0445.doge",
+      "name": "\u0441\u043e\u0440\u0435\u0445.doge",
+      "confusable": true
+    },
+    {
+      "id": "config-records-v12",
+      "ok": true,
+      "op": "config",
+      "body": "{\"p\":\"dns\",\"op\":\"config\",\"name\":\"jon.doge\",\"nostr\":\"abababababababababababababababababababababababababababababababab\",\"lightning\":\"satoshi@pay.doge\",\"subdomains\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"txt\":{\"note\":\"gm\"}}",
+      "name": "jon.doge"
     },
     {
       "id": "json-in-opreturn-rejected",

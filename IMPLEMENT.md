@@ -53,9 +53,15 @@ example.doge
 {"p":"dns","op":"config","name":"example.doge","url":"https://example.com"}
 ```
 
-`update` and `upd` mean config. A config is not a second claim of the name. Omitted keys stay as they were. `""` clears a key.
+`update` and `upd` mean config. A config is not a second claim of the name. Omitted keys stay as they were. `""` clears a scalar key. `addresses: []` clears extra pay-tos. `txt: null` clears the TXT map.
+
+Optional record keys, all ignored when omitted: `nostr` (64 hex or `npub1…`), `lightning` (`user@host` or `lnurl1…`), `addresses` (up to 8 extra Dogecoin pay-tos), `txt` (short free-form keys), `subdomains` (64 hex Merkle root of off-chain child labels). The root does not create `pay.jon.doge` on chain. A proof against that root is product, later.
+
+Two claims of the same name in one block: the earlier transaction wins. A config is judged after the spends in its own transaction, so a config that rides along with a transfer does not stick to the buyer unless the config output is paid to that buyer too.
 
 The Dogecoin address that holds the **register** inscription is the owner. JSON `address` (alias `rev`) is only a pay-to record. It can differ from the holder. It does not mint the name to that address. To mint to someone else, pay the reveal’s inscription output to them.
+
+**Chosen name.** Holding many names does not pick one. The holder inscribes `{"p":"dns","op":"primary","name":"jon.xdg"}` from the address that holds `jon.xdg`. The latest valid one wins. `name: ""` clears it. Sending the name away drops it. Indexers ignore a primary whose owner does not hold that name.
 
 ## Envelope bytes
 

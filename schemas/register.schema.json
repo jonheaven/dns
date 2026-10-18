@@ -25,7 +25,22 @@
     "html": { "type": "string" },
     "avatar": { "type": "string" },
     "content": { "type": "string", "maxLength": 280 },
-    "cname": { "type": "string" }
+    "cname": { "type": "string" },
+    "nostr": { "type": "string", "description": "64 hex pubkey or npub1…" },
+    "lightning": { "type": "string", "description": "user@host or lnurl1…" },
+    "lud16": { "type": "string" },
+    "addresses": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "type": "string" },
+      "description": "Extra pay-tos. Empty array clears."
+    },
+    "txt": {
+      "description": "Free-form keys. null clears the map.",
+      "type": ["object", "null"]
+    },
+    "subdomains": { "type": "string", "description": "64 hex Merkle root of off-chain child labels" },
+    "merkle": { "type": "string" }
   },
   "additionalProperties": true
 }

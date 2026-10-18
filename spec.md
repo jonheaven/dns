@@ -1,8 +1,8 @@
 # DNS — Dogecoin Names System
 
-**Version:** v1.1 (carrier lock)  
+**Version:** v1.2 (records + ordering)  
 **Status:** Launch draft — registration carrier is normative  
-**Last Updated:** 2026-10-15  
+**Last Updated:** 2026-10-18  
 **Chain:** Dogecoin  
 **Protocol Marker:** `p: "dns"` (JSON) or plain `label.namespace`  
 **Hero namespace:** `.doge`  
@@ -185,7 +185,15 @@ Required: `p` = `"dns"`, `op` = `"register"` or `"reg"`, `name` a valid name. Al
 
 `op` MAY be `"update"` or `"upd"`. The config inscription is not the name. It does not transfer.
 
-A config counts only when the name already exists and the config inscription’s owner is the current holder of the name inscription. Omitted keys do not clear existing values. Set a field to `""` to clear it.
+Record fields MAY also sit inside a `config` object. Indexers MUST read that object as the same fields. A top-level key wins when both are present. A body with `p:"dns"`, a valid `name`, and record fields but no `op` is a config, not a second registration.
+
+Dogecoin inscriptions split a large body across 520-byte pushes. Indexers MUST concatenate every body push before parsing. A config that does not fit in one push is still one JSON document. Dropping the last short chunk, or keeping only the last chunk, is non-compliant.
+
+A config counts only when the name already exists and the config inscription’s owner is the holder of the name **after every spend in that same transaction has been applied**. A config in the transaction that gives the name away does not stick to the new owner. The new owner may publish their own config in that transaction (their config output and the name output both pay them) or in a later one.
+
+Omitted keys do not clear existing values. Set a scalar field to `""` to clear it. Set `addresses` to `[]` to clear extra pay-tos. Set `txt` to `null` to clear the whole TXT map. A TXT value of `""` deletes that one key.
+
+**Order.** Inscriptions are applied in block order: lower height, then lower transaction index, then lower inscription index in the transaction. That order is the FCFS tie-break when two registers share a block — the earlier one wins, the later one is a missed claim. Configs use the same order. The last valid config from the current holder wins. An older config replayed after a newer one is ignored. Indexers MUST see earlier writes from the same block before they judge a later one (a write batch that is still uncommitted is not a reason to miss the earlier name).
 
 ### 5.4 Transfer
 
@@ -207,6 +215,30 @@ Indexers MUST NOT create a name from any of the following:
 
 The only OP_RETURN strings this protocol defines are the memos in §13 (`dns gift …`, `dns offer …`). They ride **beside** a real inscription. They never replace it.
 
+### 5.6 Primary (the name this address wears)
+
+SNS `rev` is a pay-to record on a name. It does not choose which of several names an address displays. Bitcoin’s later `.btc` drafts call that choice `primary-name`. Dogecoin uses one inscription:
+
+```json
+{
+  "p": "dns",
+  "op": "primary",
+  "name": "jon.xdg"
+}
+```
+
+`name` is required and MUST be a valid `label.namespace`. This inscription is not a registration and does not transfer the name.
+
+It counts only when all of these are true:
+
+1. `name` is already registered (first inscription won).
+2. The primary inscription’s owner is the current holder of that name.
+3. It is the latest such inscription from that holder (higher block, then later in the block). A later valid primary replaces the earlier one.
+
+`{"p":"dns","op":"primary","name":""}` clears the choice. Sending the name away clears it for the previous holder. The new holder does not inherit it. A primary from someone who does not hold the name is ignored, so a wallet cannot wear a name it does not own.
+
+One address has at most one primary. A wallet that holds many names wears only the one it set.
+
 ---
 
 ## 6. Name rules
@@ -219,12 +251,14 @@ Indexers MUST:
 
 **Label** and **namespace** follow Bitcoin SNS spirit with DNS-like ASCII hygiene:
 
-- **Unicode / emoji** allowed (non-ASCII). ZWJ + emoji variation selectors allowed for sequences.
-- **ASCII** only `[a-z0-9-]` after **fullwidth ASCII fold** (U+FF01..FF5E → ASCII). Letters indexed lowercase. **No underscore** (avoids `self.total_supply`). Hyphen ok mid-label (`doge-labs`), not leading/trailing.
+- **Non-ASCII** is letters, numbers, combining marks, and emoji (ZWJ + variation selectors allowed). Punctuation is not a name character.
+- **ASCII** only `[a-z0-9-]` after **fullwidth ASCII fold** (U+FF01..FF5E → ASCII). Letters indexed lowercase. **No underscore** (avoids `self.total_supply`). **No apostrophe** — straight `'`, curly `’` `‘`, or modifier `ʼ`. Hyphen ok mid-label (`doge-labs`), not leading/trailing.
 - No `/ ? # @ :` or path strings like `d.gg/invite`.
 - Reject whitespace, controls, invisible format/bidi junk, and slash/dot lookalikes (`／` `。` fraction slash, …).
 - Cap each part at **63 Unicode scalars**.
 - Stored form is folded + lowercased so `Ｊｏｎ.doge` and `jon.doge` are one name.
+- **One letter-script per part.** Digits, hyphen, combining marks, and emoji may sit with that script. A label that mixes letter scripts (Latin `j` plus Cyrillic `о`) is rejected. This is the homoglyph control. Do not fold Cyrillic or Greek onto ASCII — that would let a lookalike squat the Latin name.
+- A name that is entirely an ASCII lookalike in another script (Cyrillic `сорех.doge`) is still a distinct name. Indexers MUST set `confusable: true` on it. Product UIs SHOULD show a lookalike warning and SHOULD prefer ASCII in search suggestions. The stored key does not change.
 
 Open namespaces mean SNS-style leftovers like `readme.md`, `1.dogimap`, and doge-speak `such.123` can mint — intentional FCFS. No reserved-label list.
 
@@ -240,14 +274,21 @@ Indexers MAY expose `GET /api/dns/list?prefix=such` (match on the left label) so
 
 | Field | Meaning | Validation |
 | --- | --- | --- |
-| `address` | Pay-to. SNS calls this `rev`. Not the owner. | Dogecoin address length 26–35 |
+| `address` | Pay-to. SNS calls this `rev`. Not the owner, and not the name the address displays. | Dogecoin address length 26–35 |
 | `url` | Off-chain website | `http://` or `https://`, max 512 chars |
 | `site` | On-chain site. SNS calls this `relay`. | Inscription id `txid` + `i` + index |
 | `avatar` | Image inscription or URL | Inscription id or `https://` URL, max 128 chars |
 | `content` | Bio / text | UTF-8, max 280 chars |
 | `cname` | Alias hint | Valid name; product MAY redirect `/n/a` → `/n/b` |
+| `nostr` | Nostr pubkey | 64 hex characters, or `npub1…` |
+| `lightning` | Lightning address | `user@host`, or `lnurl1…`. Alias `lud16` |
+| `addresses` | Extra pay-tos | Array of up to 8 Dogecoin addresses. `address` stays the primary. `[]` clears |
+| `txt` | Free-form notes | Object, up to 8 keys per inscription. Key is `[a-z0-9-]{1,32}`. Value max 280 UTF-8 chars. Later configs overlay per key. `null` clears the map |
+| `subdomains` | Off-chain child commitment | 64 hex characters (32-byte Merkle root). Alias `merkle`. Not a registration |
 
 `url` is the PepeNet-style “point your name at a website.” `site` is “put a site on chain” (HTML Doginal). A name MAY have both; the gateway prefers `url` for a live redirect and still exposes `site` as an on-chain copy.
+
+`subdomains` is optional and off by default. It commits a Merkle root of child labels (`pay` under `jon.doge` → `pay.jon.doge` as a proof, not as a second L1 name). Resolving a child is a proof against that root. Indexers store the root and do not walk children. A name with no root has no subhandles. This is the Spaces-style scale hatch: pure FCFS names ignore it, and it is not a namespace the indexer sells.
 
 ---
 
@@ -260,8 +301,10 @@ For each name:
 - `sequence_number`, `inscription_number`, `height`, `timestamp` of the register
 - `records` from the winning register, then any later config from the current holder
 - `owner` from the register inscription’s current `owner_hash160` / satpoint
+- `primary` for an address: the latest valid §5.6 inscription, cleared when that address no longer holds the name
+- `supply` for that namespace and label length: how many names of each charset are taken, plus the finite ASCII pool (`26^n` letters, `10^n` digits, `36^n` letters-and-digits) for lengths 1–6. Emoji and 7+ have no cap. This is remaining supply, not a price rank.
 
-**FCFS:** if `dns_name` already has a key, ignore later registers of the same name.
+**FCFS:** the earlier inscription wins (§5.3 order). A later register does not change the owner. Indexers keep that later inscription as a missed claim (`dns_lost`) so a name page can show how many copies lost the race. Two registers in one block are not a tie the later write may overwrite.
 
 **Reorg:** delete names created in the rolled-back block.
 
@@ -276,15 +319,19 @@ Chain truth:
 | Method | Path |
 | --- | --- |
 | GET | `/api/dns/status` |
-| GET | `/api/dns/list?namespace=doge&offset=&limit=&hasContent=` |
+| GET | `/api/dns/list?namespace=doge&offset=&limit=&hasContent=&pattern=&market=&signals=` |
 | GET | `/api/dns/recent?limit=` — newest registrations (activity feed) |
+| GET | `/api/dns/stats/audit` — holders, patterns, lengths, market counts, missed FCFS |
+| GET | `/api/dns/offers?limit=` — names with on-chain bids, busiest first |
 | GET | `/api/dns/name/:name` |
+| GET | `/api/dns/name/:name/claims` — later registers that lost FCFS |
 | GET | `/api/dns/address/:address` |
+| GET | `/api/dns/primary/:address` — chosen name, or `name: null` |
 | GET | `/api/dns/resolve/:name` |
 
 `/api/doginals/dns/name/:name`, `/namespace/:ns`, `/stats` remain; they MUST return the same record object plus owner/records (additive).
 
-`resolve` is an alias of `name` with `ok` / `available` for product clients.
+`resolve` is an alias of `name` with `ok` / `available` for product clients. An available name still includes `supply` for that length so a mint screen can show how many are left before the claim.
 
 ---
 
@@ -295,7 +342,8 @@ command.dog MAY probe `url` (HEAD/GET, short timeout, no private IPs) and attach
 Storefront (`dogenals/web-com`):
 
 - `/names` — search, register, recent claim feed, explore, my names (primary)
-- `/names/:name` — name profile + point-at-site
+- `/names/stats` — holder, pattern, and missed-FCFS audit
+- `/names/:name` — name profile + point-at-site. The name is shown as the same domain card as the inscription page, including how many later claims missed FCFS
 - `/dns` · `/dns/:name` — same product (tech mirror)
 - `/n/:name` — gateway
 - `/n/:name` — gateway: redirect to `url`, or iframe `/cdn/content/:site`
@@ -328,8 +376,15 @@ Studio mint UIs (`/names`, mirror `/dns`) MAY attach a registrar fee on the regi
 (e.g. 1.1 DOGE to an operator house address). That fee is **product-only**. Indexers MUST
 NOT require it for a valid FCFS register. DIY / CLI mints without the fee remain valid.
 
-A checkout of several names is one commit transaction with one P2SH output per name, then
-one reveal per name. Dogecoin era-1 indexers read `vin[0].scriptSig` only, so one reveal
+A checkout of several names is one or more commit transactions, each with one P2SH
+output per name, then one reveal per name. One commit carries at most 20 names.
+Dogecoin Core rejects a mempool package past 25 transactions, and 20 leaves room
+when the funding coin is still unconfirmed. A larger cart is several of those
+payments in one wallet approval. Each payment spends a different confirmed coin,
+so a single fat coin has to be split and that split has to confirm before the
+payments are signed. The mint page accepts a pasted list (spaces, commas, or lines). Taken
+and invalid names are dropped before they enter the cart. A word with no dot is claimed in
+the `.doge` namespace. Dogecoin era-1 indexers read `vin[0].scriptSig` only, so one reveal
 carries one inscription. Extra lines in a plain-text body are not extra registrations.
 
 A gift message is a value-0 OP_RETURN on the reveal: `dns gift <message>` (80-byte cap,
@@ -355,6 +410,7 @@ Works on unminted names. Not an on-chain field. See [`rarity.md`](rarity.md)
 - Wildcard ICANN-style `*.doge.dogecoin.dog` host
 - Desktop TLS helper (PepeNet-desktop analogue)
 - ÐMP name market UI (the inscription is already listable)
-- Subnames (`pay.jon.doge`) as child inscriptions
+- Subnames as child inscriptions (`pay.jon.doge` on L1). The optional `subdomains` Merkle root is the scale path; proof checks are product, not a second indexer
+- On-chain proof verification of that root (v1.2 stores the commitment only)
 - Escrow / atomic accept-offer settlement
-- Empirical `#rank / supply` from indexer histograms
+- Empirical `#rank / supply` sort among taken names (dogex publishes remaining ASCII supply per namespace and length; it does not order one name ahead of another)
