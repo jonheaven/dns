@@ -15,7 +15,7 @@ A `.doge` name is a Doginals inscription. The first valid inscription wins, and 
 | **Rarity** | [rarity.md](rarity.md) — trait → score → tier (`rarity-v1`) |
 | **Indexer** | dogex `/api/dns/*` and `/api/doginals/dns/*` |
 | **Product** | [dogex.dog/names](https://dogex.dog/names) · mirror `/dns` · gateway `/n/jon.doge` |
-| **Wallet** | Dojak Local Browser Wallet (`signInscriptionTxs` / `publishDnsOnChain`) |
+| **Wallet** | Dig Local Browser Wallet (`signInscriptionTxs` / `publishDnsOnChain`) |
 
 DNS is a **first-come inscription** of a human-readable name (`jon.doge`). The inscription UTXO **is** the name. Transfer the UTXO, transfer the name. Point it at a website, an on-chain HTML inscription, or a Dogecoin address.
 

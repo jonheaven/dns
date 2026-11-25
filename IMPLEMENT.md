@@ -59,6 +59,8 @@ Optional record keys, all ignored when omitted: `nostr` (64 hex or `npub1…`), 
 
 Two claims of the same name in one block: the earlier transaction wins. A config is judged after the spends in its own transaction, so a config that rides along with a transfer does not stick to the buyer unless the config output is paid to that buyer too.
 
+Records belong to the holder. Sell or move the name to another address and every record resets, including any set by a JSON register. The new holder inscribes their own config. A move to the same address keeps them.
+
 The Dogecoin address that holds the **register** inscription is the owner. JSON `address` (alias `rev`) is only a pay-to record. It can differ from the holder. It does not mint the name to that address. To mint to someone else, pay the reveal’s inscription output to them.
 
 **Chosen name.** Holding many names does not pick one. The holder inscribes `{"p":"dns","op":"primary","name":"jon.xdg"}` from the address that holds `jon.xdg`. The latest valid one wins. `name: ""` clears it. Sending the name away drops it. Indexers ignore a primary whose owner does not hold that name.
@@ -117,6 +119,7 @@ Accept the name only when all of these hold:
 - ASCII in each part is `[a-z0-9-]` after lowercasing. No underscore, no leading or trailing hyphen.
 - No space, `/ ? # @ :`, or a second dot (`a.b.doge` is rejected).
 - Each part is 1–63 Unicode scalars.
+- Non-ASCII scalars are letters, numbers, combining marks, or emoji. Emoji means Unicode 18.0 `Extended_Pictographic`, plus skin-tone modifiers and regional indicators. `⭐.doge` is valid. ASCII `#` and `*` are not.
 - Namespace is not `bitmap` and does not start with `dogemap`.
 - Hero suffix for a product UI is `.doge`. Other suffixes are still valid names (`jon.eth` is a different name from `jon.doge`).
 
@@ -133,6 +136,12 @@ All of these are true on the reveal transaction Core accepted:
 - The owner is the address holding that output, not a trailing address in an OP_RETURN.
 
 If the only new output is nulldata and the explorer says unknown protocol, the mint failed. Fix the carrier and mint again. The failed transaction did not reserve the name.
+
+## If you index names
+
+- Rank every register with the spec §5.7 key (`W = 30`), live or replaying. A replay keeps the last 30 blocks of P2SH outputs so a committed reveal ranks by its commit, and it voids a JSON register whose `bitworkc` / `bitworkr` claim fails. Ranking a replay by reveal height alone disagrees with a live indexer.
+- When the register output moves to a different owner, reset every record. A move to the same address keeps them (spec §5.3).
+- Check yourself against `vectors/conformance.json`: `vectors` for bodies, `sequences` for ownership and records over several blocks.
 
 ## Leave these alone
 

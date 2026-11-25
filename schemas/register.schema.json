@@ -40,7 +40,13 @@
       "type": ["object", "null"]
     },
     "subdomains": { "type": "string", "description": "64 hex Merkle root of off-chain child labels" },
-    "merkle": { "type": "string" }
+    "merkle": { "type": "string" },
+    "tlsa": {
+      "type": "array",
+      "maxItems": 4,
+      "items": { "type": "string", "pattern": "^[23] [01] (1 [0-9a-f]{64}|2 [0-9a-f]{128})$" },
+      "description": "Optional DANE TLSA associations (spec §7). Empty array clears."
+    }
   },
   "additionalProperties": true
 }

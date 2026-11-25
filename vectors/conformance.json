@@ -1,6 +1,6 @@
 {
   "protocol": "dns",
-  "version": "1.2",
+  "version": "1.3",
   "vectors": [
     {
       "id": "plain-jon",
@@ -155,6 +155,291 @@
       "carrier": "op_return",
       "body": "{\"p\":\"dns\",\"op\":\"register\",\"name\":\"jon.doge\"}",
       "reason": "JSON registers only as inscription content."
+    }
+  ],
+  "sequences_notes": "Each sequence is applied in order. A, B are distinct owner addresses. 'h' is the block height, 'tx' the transaction index. A register ranks by its reveal (h, tx, 0) unless 'committed' is true: then it ranks by 'commit', the P2SH output its reveal spends, when that output confirmed at most W = 30 blocks earlier (spec 5.7). 'move' spends the register output to 'to' (null = an output no address can spend). A config listed with 'sameTxAsMove' rides in the transaction of the move before it. 'expect' is the name's state after the last step; 'records' {} means no records. A replay and a live indexer MUST reach the same 'expect'.",
+  "sequences": [
+    {
+      "id": "transfer-resets-records",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "body": "{\"p\":\"dns\",\"op\":\"reg\",\"name\":\"jon.doge\",\"address\":\"D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA\",\"content\":\"gm\"}"
+        },
+        {
+          "op": "move",
+          "h": 120,
+          "to": "B"
+        }
+      ],
+      "expect": {
+        "name": "jon.doge",
+        "owner": "B",
+        "records": {},
+        "configured": false
+      },
+      "reason": "Records belong to a holding (\u00a75.3). The buyer never inherits the seller's pay-to."
+    },
+    {
+      "id": "transfer-resets-config-records",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "body": "jon.doge"
+        },
+        {
+          "op": "config",
+          "h": 110,
+          "tx": 3,
+          "owner": "A",
+          "body": "{\"p\":\"dns\",\"op\":\"config\",\"name\":\"jon.doge\",\"address\":\"D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA\"}"
+        },
+        {
+          "op": "move",
+          "h": 120,
+          "to": "B"
+        }
+      ],
+      "expect": {
+        "name": "jon.doge",
+        "owner": "B",
+        "records": {},
+        "configured": false
+      }
+    },
+    {
+      "id": "move-to-same-address-keeps-records",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "body": "{\"p\":\"dns\",\"op\":\"reg\",\"name\":\"jon.doge\",\"content\":\"gm\"}"
+        },
+        {
+          "op": "move",
+          "h": 120,
+          "to": "A"
+        }
+      ],
+      "expect": {
+        "name": "jon.doge",
+        "owner": "A",
+        "records": {
+          "content": "gm"
+        }
+      }
+    },
+    {
+      "id": "burn-resets-records",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "body": "{\"p\":\"dns\",\"op\":\"reg\",\"name\":\"jon.doge\",\"address\":\"D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA\"}"
+        },
+        {
+          "op": "move",
+          "h": 120,
+          "to": null
+        }
+      ],
+      "expect": {
+        "name": "jon.doge",
+        "owner": null,
+        "records": {},
+        "taken": true
+      }
+    },
+    {
+      "id": "buyer-config-in-the-transfer-sticks",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "body": "jon.doge"
+        },
+        {
+          "op": "config",
+          "h": 110,
+          "tx": 3,
+          "owner": "A",
+          "body": "{\"p\":\"dns\",\"op\":\"config\",\"name\":\"jon.doge\",\"content\":\"seller\"}"
+        },
+        {
+          "op": "move",
+          "h": 120,
+          "to": "B"
+        },
+        {
+          "op": "config",
+          "h": 120,
+          "owner": "B",
+          "sameTxAsMove": true,
+          "body": "{\"p\":\"dns\",\"op\":\"config\",\"name\":\"jon.doge\",\"url\":\"https://dogecoin.dog\"}"
+        }
+      ],
+      "expect": {
+        "name": "jon.doge",
+        "owner": "B",
+        "records": {
+          "url": "https://dogecoin.dog"
+        },
+        "configured": true
+      },
+      "reason": "The reset is applied with the spend. The buyer's config in that transaction is their first one; the seller's content does not come back."
+    },
+    {
+      "id": "seller-config-after-sale-ignored",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "body": "jon.doge"
+        },
+        {
+          "op": "move",
+          "h": 120,
+          "to": "B"
+        },
+        {
+          "op": "config",
+          "h": 121,
+          "tx": 2,
+          "owner": "A",
+          "body": "{\"p\":\"dns\",\"op\":\"config\",\"name\":\"jon.doge\",\"address\":\"D8mZsgKwmSQWYRPEMCcm8KzNFj1JVF5UpA\"}"
+        }
+      ],
+      "expect": {
+        "name": "jon.doge",
+        "owner": "B",
+        "records": {}
+      }
+    },
+    {
+      "id": "replay-committed-reveal-wins",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 5,
+          "owner": "B",
+          "body": "carol.doge"
+        },
+        {
+          "op": "register",
+          "h": 110,
+          "tx": 1,
+          "owner": "A",
+          "body": "carol.doge",
+          "commit": {
+            "h": 99,
+            "tx": 2,
+            "vout": 0
+          },
+          "committed": true
+        }
+      ],
+      "expect": {
+        "name": "carol.doge",
+        "owner": "A",
+        "missedClaims": 1
+      },
+      "reason": "A's commit (99) out-ranks B's reveal (100) inside W = 30. A replay keeps the last 30 blocks of P2SH outputs and agrees with a live indexer (\u00a75.7)."
+    },
+    {
+      "id": "replay-classic-reveal-ranks-by-reveal",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 5,
+          "owner": "B",
+          "body": "carol.doge"
+        },
+        {
+          "op": "register",
+          "h": 110,
+          "tx": 1,
+          "owner": "A",
+          "body": "carol.doge",
+          "commit": {
+            "h": 99,
+            "tx": 2,
+            "vout": 0
+          },
+          "committed": false
+        }
+      ],
+      "expect": {
+        "name": "carol.doge",
+        "owner": "B",
+        "missedClaims": 1
+      },
+      "reason": "Without the committed redeem a reveal ranks by its reveal."
+    },
+    {
+      "id": "slow-committed-reveal-ranks-by-reveal",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 5,
+          "owner": "B",
+          "body": "carol.doge"
+        },
+        {
+          "op": "register",
+          "h": 131,
+          "tx": 1,
+          "owner": "A",
+          "body": "carol.doge",
+          "commit": {
+            "h": 99,
+            "tx": 2,
+            "vout": 0
+          },
+          "committed": true
+        }
+      ],
+      "expect": {
+        "name": "carol.doge",
+        "owner": "B",
+        "missedClaims": 1
+      },
+      "reason": "131 - 99 = 32 > W, so A ranks by its reveal. By then B is final anyway."
+    },
+    {
+      "id": "replay-bitwork-void",
+      "steps": [
+        {
+          "op": "register",
+          "h": 100,
+          "tx": 1,
+          "owner": "A",
+          "revealTxid": "1111111111111111111111111111111111111111111111111111111111111111",
+          "body": "{\"p\":\"dns\",\"op\":\"reg\",\"name\":\"erin.doge\",\"bitworkr\":\"0000000000\"}"
+        }
+      ],
+      "expect": {
+        "name": "erin.doge",
+        "taken": false,
+        "missedClaims": 0
+      },
+      "reason": "A failed bitwork claim is void in a replay as at the tip. It is not a missed claim."
     }
   ]
 }

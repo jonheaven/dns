@@ -193,3 +193,10 @@ do not invent fake ranks.
 Rarity is a **deterministic overlay**. Indexers MAY attach `rarity` on DNS JSON
 responses. They MUST use the same versioned rules. Omitting rarity is valid; clients
 MAY compute locally from the name string.
+
+dogex publishes **remaining supply** separately from rarity. `GET /api/dns/stats/audit`
+includes `supply.doge`, `supply.dogecoin`, and `supply.doginals` (taken counts by
+label length and charset, plus `letterSupply` / `digitSupply` / `alnumSupply` for
+lengths 1–6). `GET /api/dns/name/:name` and `GET /api/dns/resolve/:name` include the
+one bucket for that name, including when the name is still available. That number is
+how many exist, not an ordinal rank and not the intrinsic score.
