@@ -107,7 +107,7 @@ Commit output script:
 OP_HASH160 <HASH160(redeem script)> OP_EQUAL
 ```
 
-Reference wallets put the inscription on reveal vout 0 and pay it 100000 koinu (0.001 DOGE). Any spendable output above dust that this script reveals is the name. A fee to a registrar is not required.
+Reference wallets put the inscription on reveal vout 0 and pay it 100000 koinu (0.001 DOGE). Any spendable output at or above that hard-dust limit that this script reveals is the name. A fee to a registrar is not required.
 
 Broadcast the commit to Dogecoin Core. After Core knows that txid, broadcast the reveal. The reveal’s input 0 spends the commit output. A public HTTP “push” API that returns a txid which `getrawtransaction` cannot see did not mint anything.
 

@@ -141,7 +141,7 @@ Chunks longer than one piece use the same multipart rules: parts count `N`, then
 
 Broadcast **commit, then reveal**, to Dogecoin Core (`sendrawtransaction` or a proxy that forwards to Core). Wait until Core returns the commit txid before broadcasting the reveal — the reveal spends the commit. A txid from a public relay that never appears in `getrawtransaction` is not a mint.
 
-The reference inscription output value is 100000 koinu (0.001 DOGE) to a standard address. Any spendable output above dust that carries this inscription is the name UTXO. A studio registrar fee on the reveal is product-only (§13) and MUST NOT be required for validity.
+The reference inscription output value is 100000 koinu (0.001 DOGE) to a standard address. Any spendable output at or above that hard-dust limit that carries this inscription is the name UTXO. An output under 100000 koinu is not relayed, so it cannot be the name. A studio registrar fee on the reveal is product-only (§13) and MUST NOT be required for validity.
 
 A tapscript witness envelope is not the mint path for this spec. If one is confirmed and the body parses, an indexer MAY treat it as an inscription. A website mint MUST still use the P2SH reveal above.
 
